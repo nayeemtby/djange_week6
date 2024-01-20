@@ -6,15 +6,18 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.http import HttpResponse
 from django.views.generic import CreateView, ListView
-from transactions.constants import DEPOSIT, WITHDRAWAL,LOAN, LOAN_PAID
+from accounts.models import UserBankAccount
+from transactions.constants import DEPOSIT, TRANSFER_RECEIVE, TRANSFER_SEND, WITHDRAWAL, LOAN, LOAN_PAID
 from datetime import datetime
 from django.db.models import Sum
 from transactions.forms import (
     DepositForm,
+    TransferForm,
     WithdrawForm,
     LoanRequestForm,
 )
 from transactions.models import Transaction
+
 
 class TransactionCreateMixin(LoginRequiredMixin, CreateView):
     template_name = 'transactions/transaction_form.html'
@@ -30,7 +33,7 @@ class TransactionCreateMixin(LoginRequiredMixin, CreateView):
         return kwargs
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs) # template e context data pass kora
+        context = super().get_context_data(**kwargs)  # template e context data pass kora
         context.update({
             'title': self.title
         })
@@ -52,7 +55,8 @@ class DepositMoneyView(TransactionCreateMixin):
         # if not account.initial_deposit_date:
         #     now = timezone.now()
         #     account.initial_deposit_date = now
-        account.balance += amount # amount = 200, tar ager balance = 0 taka new balance = 0+200 = 200
+        # amount = 200, tar ager balance = 0 taka new balance = 0+200 = 200
+        account.balance += amount
         account.save(
             update_fields=[
                 'balance'
@@ -90,6 +94,7 @@ class WithdrawMoneyView(TransactionCreateMixin):
 
         return super().form_valid(form)
 
+
 class LoanRequestView(TransactionCreateMixin):
     form_class = LoanRequestForm
     title = 'Request For Loan'
@@ -101,7 +106,7 @@ class LoanRequestView(TransactionCreateMixin):
     def form_valid(self, form):
         amount = form.cleaned_data.get('amount')
         current_loan_count = Transaction.objects.filter(
-            account=self.request.user.account,transaction_type=3,loan_approve=True).count()
+            account=self.request.user.account, transaction_type=3, loan_approve=True).count()
         if current_loan_count >= 3:
             return HttpResponse("You have cross the loan limits")
         messages.success(
@@ -110,32 +115,34 @@ class LoanRequestView(TransactionCreateMixin):
         )
 
         return super().form_valid(form)
-    
+
+
 class TransactionReportView(LoginRequiredMixin, ListView):
     template_name = 'transactions/transaction_report.html'
     model = Transaction
-    balance = 0 # filter korar pore ba age amar total balance ke show korbe
-    
+    balance = 0  # filter korar pore ba age amar total balance ke show korbe
+
     def get_queryset(self):
         queryset = super().get_queryset().filter(
             account=self.request.user.account
         )
         start_date_str = self.request.GET.get('start_date')
         end_date_str = self.request.GET.get('end_date')
-        
+
         if start_date_str and end_date_str:
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-            
-            queryset = queryset.filter(timestamp__date__gte=start_date, timestamp__date__lte=end_date)
+
+            queryset = queryset.filter(
+                timestamp__date__gte=start_date, timestamp__date__lte=end_date)
             self.balance = Transaction.objects.filter(
                 timestamp__date__gte=start_date, timestamp__date__lte=end_date
             ).aggregate(Sum('amount'))['amount__sum']
         else:
             self.balance = self.request.user.account.balance
-       
-        return queryset.distinct() # unique queryset hote hobe
-    
+
+        return queryset.distinct()  # unique queryset hote hobe
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update({
@@ -143,17 +150,17 @@ class TransactionReportView(LoginRequiredMixin, ListView):
         })
 
         return context
-    
-        
+
+
 class PayLoanView(LoginRequiredMixin, View):
     def get(self, request, loan_id):
         loan = get_object_or_404(Transaction, id=loan_id)
         print(loan)
         if loan.loan_approve:
             user_account = loan.account
-                # Reduce the loan amount from the user's balance
-                # 5000, 500 + 5000 = 5500
-                # balance = 3000, loan = 5000
+            # Reduce the loan amount from the user's balance
+            # 5000, 500 + 5000 = 5500
+            # balance = 3000, loan = 5000
             if loan.amount < user_account.balance:
                 user_account.balance -= loan.amount
                 loan.balance_after_transaction = user_account.balance
@@ -164,20 +171,54 @@ class PayLoanView(LoginRequiredMixin, View):
                 return redirect('transactions:loan_list')
             else:
                 messages.error(
-            self.request,
-            f'Loan amount is greater than available balance'
-        )
+                    self.request,
+                    f'Loan amount is greater than available balance'
+                )
 
         return redirect('loan_list')
 
 
-class LoanListView(LoginRequiredMixin,ListView):
+class LoanListView(LoginRequiredMixin, ListView):
     model = Transaction
     template_name = 'transactions/loan_request.html'
-    context_object_name = 'loans' # loan list ta ei loans context er moddhe thakbe
-    
+    context_object_name = 'loans'  # loan list ta ei loans context er moddhe thakbe
+
     def get_queryset(self):
         user_account = self.request.user.account
-        queryset = Transaction.objects.filter(account=user_account,transaction_type=3)
+        queryset = Transaction.objects.filter(
+            account=user_account, transaction_type=3)
         print(queryset)
         return queryset
+
+
+class TransferMoneyView(TransactionCreateMixin):
+    form_class = TransferForm
+    title = 'Transfer Money'
+
+    def get_initial(self):
+        initial = {'transaction_type': TRANSFER_SEND}
+        return initial
+
+    def form_valid(self, form):
+        amount = form.cleaned_data.get('amount')
+        receiver = form.cleaned_data.get('receiver_account')
+        ra = UserBankAccount.objects.filter(account_no=receiver).get()
+
+        receiver_transaction = Transaction()
+        receiver_transaction.account = ra
+        receiver_transaction.transaction_type = TRANSFER_RECEIVE
+        receiver_transaction.amount = amount
+        ra.balance += amount
+        receiver_transaction.balance_after_transaction = ra.balance
+        ra.save(update_fields=['balance'])
+        receiver_transaction.save()
+
+        self.request.user.account.balance -= form.cleaned_data.get('amount')
+        self.request.user.account.save(update_fields=['balance'])
+
+        messages.success(
+            self.request,
+            f'Successfully Transfered {"{:,.2f}".format(float(amount))}$ to "{receiver}"'
+        )
+
+        return super().form_valid(form)

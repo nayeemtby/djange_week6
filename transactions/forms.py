@@ -1,5 +1,9 @@
 from django import forms
+
+from accounts.models import UserBankAccount
 from .models import Transaction
+
+
 class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
@@ -9,10 +13,12 @@ class TransactionForm(forms.ModelForm):
         ]
 
     def __init__(self, *args, **kwargs):
-        self.account = kwargs.pop('account') # account value ke pop kore anlam
+        self.account = kwargs.pop('account')  # account value ke pop kore anlam
         super().__init__(*args, **kwargs)
-        self.fields['transaction_type'].disabled = True # ei field disable thakbe
-        self.fields['transaction_type'].widget = forms.HiddenInput() # user er theke hide kora thakbe
+        # ei field disable thakbe
+        self.fields['transaction_type'].disabled = True
+        # user er theke hide kora thakbe
+        self.fields['transaction_type'].widget = forms.HiddenInput()
 
     def save(self, commit=True):
         self.instance.account = self.account
@@ -21,9 +27,10 @@ class TransactionForm(forms.ModelForm):
 
 
 class DepositForm(TransactionForm):
-    def clean_amount(self): # amount field ke filter korbo
+    def clean_amount(self):  # amount field ke filter korbo
         min_deposit_amount = 100
-        amount = self.cleaned_data.get('amount') # user er fill up kora form theke amra amount field er value ke niye aslam, 50
+        # user er fill up kora form theke amra amount field er value ke niye aslam, 50
+        amount = self.cleaned_data.get('amount')
         if amount < min_deposit_amount:
             raise forms.ValidationError(
                 f'You need to deposit at least {min_deposit_amount} $'
@@ -38,7 +45,7 @@ class WithdrawForm(TransactionForm):
         account = self.account
         min_withdraw_amount = 500
         max_withdraw_amount = 20000
-        balance = account.balance # 1000
+        balance = account.balance  # 1000
         amount = self.cleaned_data.get('amount')
         if amount < min_withdraw_amount:
             raise forms.ValidationError(
@@ -50,7 +57,7 @@ class WithdrawForm(TransactionForm):
                 f'You can withdraw at most {max_withdraw_amount} $'
             )
 
-        if amount > balance: # amount = 5000, tar balance ache 200
+        if amount > balance:  # amount = 5000, tar balance ache 200
             raise forms.ValidationError(
                 f'You have {balance} $ in your account. '
                 'You can not withdraw more than your account balance'
@@ -59,9 +66,42 @@ class WithdrawForm(TransactionForm):
         return amount
 
 
-
 class LoanRequestForm(TransactionForm):
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
+
+        return amount
+
+
+class TransferForm(TransactionForm):
+    receiver_account = forms.IntegerField()
+
+    class Meta:
+        model = Transaction
+        fields = ['receiver_account', 'amount', 'transaction_type']
+
+    def clean_receiver_account(self):
+        receiver = self.cleaned_data.get('receiver_account')
+
+        if UserBankAccount.objects.filter(account_no=receiver).count() == 0:
+            raise forms.ValidationError(
+                f'No account exists with account number "{receiver}"')
+
+        return receiver
+
+    def clean_amount(self):
+        min_transfer = 50
+        max_transfer = 50000
+        balance = self.account.balance
+        amount = self.cleaned_data.get('amount')
+        if amount < min_transfer:
+            raise forms.ValidationError(
+                f'Minimum transfer amount is ${min_transfer}')
+        if amount > max_transfer:
+            raise forms.ValidationError(
+                f'Maximum transfer amount is ${max_transfer}')
+        if amount > balance:
+            raise forms.ValidationError(
+                'Transfer amount cannot be greater than your account balance')
 
         return amount
