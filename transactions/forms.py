@@ -1,6 +1,8 @@
+from typing import Any
 from django import forms
 
 from accounts.models import UserBankAccount
+from core.models import BankMeta
 from .models import Transaction
 
 
@@ -62,7 +64,6 @@ class WithdrawForm(TransactionForm):
                 f'You have {balance} $ in your account. '
                 'You can not withdraw more than your account balance'
             )
-
         return amount
 
 
