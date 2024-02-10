@@ -31,3 +31,10 @@ class UserReview(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     book = models.ForeignKey(Book, on_delete=models.CASCADE)
     review = models.CharField(max_length=128)
+
+class BorrowRecord(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    book = models.ForeignKey(Book, on_delete=models.CASCADE)
+    borrowDate = models.DateTimeField(auto_now_add=True)
+    returned = models.BooleanField(default=False)
+    cost = models.DecimalField(default=0, max_digits=12, decimal_places=2)

@@ -4,6 +4,7 @@ from django.shortcuts import redirect, render
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
 
 from django.contrib.auth import logout
 from django.views.generic import FormView
@@ -40,12 +41,14 @@ class RegistrationView(FormView):
 
     def form_valid(self, form):
         form.save()
+        messages.success(self.request, 'Registration successful')
         return super().form_valid(form)
 
 
 @login_required
 def logoutView(req: HttpRequest):
     logout(req)
+    messages.success(req, 'Successfully logged out')
     return redirect('browseBooks')
 
 
@@ -62,11 +65,16 @@ class DepositView(LoginRequiredMixin, FormView):
 
     def form_valid(self, form: DepositForm):
         account = LibraryAccount.objects.filter(user=self.request.user).get()
-        account.balance += form.amount
+        account.balance += form.cleaned_data['amount']
         account.save()
+        messages.success(self.request, 'Deposit success')
         return super().form_valid(form)
 
 
 @login_required
 def accountView(req):
-    return render(req, 'account.html')
+    account = LibraryAccount.objects.filter(user=req.user).get()
+    ctx = {
+        'account': account
+    }
+    return render(req, 'account.html', context=ctx)

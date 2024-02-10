@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h3 class="my-3">Categories</h3>
+    <div class="d-flex flex-wrap gap-3">
+        
+        <a href="{% url 'browseBooks' %}"><button type="button" class="btn btn-{% if rc == None %}dark{%else%}light{% endif %}">All</button></a>
+        {% for cat in cats %}
+        <a href="{% url 'browseBooks' %}?cat={{cat.id}}"><button type="button" class="btn btn-{% if rc == cat.id|stringformat:"s" %}dark{%else%}light{% endif %}">{{cat.title}}</button></a>
+        {% endfor %}
+    </div>
+    <hr>
+    <div class="row flex-wrap gap-3">
+        {% for book in books %}
+        <div class="card col-3">
+            <img src="{{book.image.url}}" class="card-img-top" alt="Book image">
+            <div class="card-body">
+                <h5 class="card-title">{{book.title}}</h5>
+                <p class="card-text">{{book.description}}</p>
+                <a href="#" class="btn btn-primary">Go somewhere</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}

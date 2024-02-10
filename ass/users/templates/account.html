@@ -2,6 +2,10 @@
 
 {% block content %}
 
-<p class="text-3"><strong>Name: </strong>{{ request.user.first_name }}</p>
+<div class="container">
+    <p class="text-3"><strong>Name: </strong>{{ request.user.first_name }}</p>
+    <p class="text-3"><strong>Balance: </strong>{{ account.balance }}</p>
+    <a href="{% url 'deposit' %}"><button type="button" class="btn btn-primary">Deposit</button></a>
+</div>
 
 {% endblock content %}
