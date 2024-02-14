@@ -9,6 +9,8 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.views.generic import FormView
 from django.urls import reverse_lazy
+
+from library.models import BorrowRecord
 from .forms import DepositForm, SignupForm
 from users.models import LibraryAccount
 
@@ -74,7 +76,9 @@ class DepositView(LoginRequiredMixin, FormView):
 @login_required
 def accountView(req):
     account = LibraryAccount.objects.filter(user=req.user).get()
+    borrowRecords = BorrowRecord.objects.filter(user=req.user).order_by('borrowDate').reverse().all()
     ctx = {
-        'account': account
+        'account': account,
+        'records': borrowRecords
     }
     return render(req, 'account.html', context=ctx)

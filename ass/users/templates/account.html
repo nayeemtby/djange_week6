@@ -3,9 +3,31 @@
 {% block content %}
 
 <div class="container">
+    <h3 class="my-3">Account</h3>
     <p class="text-3"><strong>Name: </strong>{{ request.user.first_name }}</p>
     <p class="text-3"><strong>Balance: </strong>{{ account.balance }}</p>
     <a href="{% url 'deposit' %}"><button type="button" class="btn btn-primary">Deposit</button></a>
+    <div class="my-5"></div>
+    <h3 class="my-3">Borrow history</h3>
+    {% for record in records %}
+    <div class="card mb-3 w-100" style="background-color: {% if record.returned %}#14AB6044{% else %}#fff3bd88{% endif %};">
+        <div class="row g-0">
+            <div class="col-md-4">
+                <img src="{{record.book.image.url}}" class="img-fluid rounded-start" alt="Book image">
+            </div>
+            <div class="col-md-8">
+                <div class="card-body">
+                    <h5 class="card-title">{{record.book.title}}</h5>
+                    <p class="card-text">Borrowed on {{record.borrowDate|date:"d M, Y"}}</p>
+                    <p class="card-text"><small class="text-muted">
+                            {% if record.returned %}You have returned this book
+                            {% else %}You have yet to return this book{% endif %}
+                        </small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 
 {% endblock content %}

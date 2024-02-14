@@ -9,38 +9,40 @@
         <img class="col-10 col-lg-6" src="{{book.image.url}}" alt="book-photo" style="border-radius: 30px;">
         <div class="col-10 col-lg-5">
             <h1 class="my-3">{{book.title}}</h1>
-            <p>Category: {{car.category.title}}</p>
-            <p>Price: ${{car.price}}</p>
+            <p>Category: {{book.category.title}}</p>
+            <p>Price: ${{book.price}}</p>
 
             {% if user.is_authenticated %}
-            {% if car.stock > 0 %}
-            <a class="btn btn-success" href="{% url 'buyCar' car.id %}">Buy now</a>
+            {% if hasBorrowed %}
+            <a class="btn btn-success" href="{% url 'returnBook' book.id %}">Return</a>
             {% else %}
-            <a class="btn btn-outline-danger disabled" href="">Out of Stock</a>
+            <a class="btn btn-success" href="{% url 'borrowBook' book.id %}">Borrow</a>
             {% endif %}
             {% endif %}
 
-            <p class="my-3">{{ car.description }}</p>
+            <p class="my-3">{{ book.description }}</p>
         </div>
     </div>
-    <h2 class="mt-5">Comments</h2>
+    <h2 class="mt-5">Reviews</h2>
     <hr>
 
     {% for comment in comments %}
     <div class="card mb-3">
         <div class="card-body">
-            <h5 class="card-title">{{comment.name}}</h5>
-            <p class="card-text">{{comment.content}}</p>
+            <h5 class="card-title">{{comment.user.first_name}}</h5>
+            <p class="card-text">{{comment.review}}</p>
         </div>
     </div>
     {% endfor %}
-    <h2 class="mt-5">Add comment</h2>
+    {% if user.is_authenticated and hasBorrowedInThePast %}
+    <h2 class="mt-5">Add review</h2>
     <hr>
     <form method="post" class="w-100 w-md-75 mb-5">
         {% csrf_token %}
         {{ form | crispy}}
         <button class="btn btn-success" type="submit">Submit</button>
     </form>
+    {% endif %}
 </div>
 
 {% endblock content %}

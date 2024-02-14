@@ -18,7 +18,7 @@
             <div class="card-body">
                 <h5 class="card-title">{{book.title}}</h5>
                 <p class="card-text">{{book.description}}</p>
-                <a href="#" class="btn btn-primary">Go somewhere</a>
+                <a href="{% url 'bookDetails' book.id %}" class="btn btn-primary">Details</a>
             </div>
         </div>
         {% endfor %}
