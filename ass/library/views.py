@@ -2,6 +2,7 @@ from django.http import HttpRequest
 from django.shortcuts import redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from core.mailer import sendMail
 from library.forms import ReviewForm
 
 from library.models import Book, BookCategory, BorrowRecord, UserReview
@@ -70,6 +71,12 @@ def borrowBookView(req: HttpRequest, id):
         account.balance -= book.price
         account.save()
         messages.success(req, 'You have successfully borrowed this book')
+        user = req.user
+        ctx = {
+            'title':'Hello '+user.first_name+',',
+            'body':'You have successfully borrowed the book "'+book.title+'".'
+        }
+        sendMail(user.email,'You just borrowed a book','email.html',ctx)
 
     return redirect('bookDetails', book.id)
 

@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.views.generic import FormView
 from django.urls import reverse_lazy
+from core.mailer import sendMail
 
 from library.models import BorrowRecord
 from .forms import DepositForm, SignupForm
@@ -67,16 +68,24 @@ class DepositView(LoginRequiredMixin, FormView):
 
     def form_valid(self, form: DepositForm):
         account = LibraryAccount.objects.filter(user=self.request.user).get()
-        account.balance += form.cleaned_data['amount']
+        amount = form.cleaned_data['amount']
+        account.balance += amount
         account.save()
         messages.success(self.request, 'Deposit success')
+        user = self.request.user
+        ctx = {
+            'title':'Hello '+user.first_name+',',
+            'body':'Your deposit of $'+str(amount)+' was successful.'
+        }
+        sendMail(self.request.user.email,'Deposit Success','email.html',ctx)
         return super().form_valid(form)
 
 
 @login_required
 def accountView(req):
     account = LibraryAccount.objects.filter(user=req.user).get()
-    borrowRecords = BorrowRecord.objects.filter(user=req.user).order_by('borrowDate').reverse().all()
+    borrowRecords = BorrowRecord.objects.filter(
+        user=req.user).order_by('borrowDate').reverse().all()
     ctx = {
         'account': account,
         'records': borrowRecords
