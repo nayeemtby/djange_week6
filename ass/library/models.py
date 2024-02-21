@@ -20,7 +20,7 @@ class Book(models.Model):
     category = models.ForeignKey(BookCategory, on_delete=models.CASCADE)
     title = models.CharField(max_length=64)
     description = models.CharField(max_length=256)
-    image = models.ImageField(upload_to=_getFilePath)
+    image = models.CharField(max_length=256)
     price = models.DecimalField(default=0, max_digits=12, decimal_places=2)
 
     def __str__(self) -> str:
@@ -31,6 +31,7 @@ class UserReview(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     book = models.ForeignKey(Book, on_delete=models.CASCADE)
     review = models.CharField(max_length=128)
+
 
 class BorrowRecord(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
